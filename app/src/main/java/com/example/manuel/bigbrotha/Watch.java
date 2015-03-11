@@ -12,19 +12,18 @@ import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.Handler;
 import android.os.Looper;
+import android.os.Message;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.ImageView;
-import android.widget.Toast;
 
 import java.io.DataOutputStream;
-import java.io.IOException;
-import java.io.PrintWriter;
 import java.net.Socket;
-import java.sql.Timestamp;
+import java.util.concurrent.LinkedBlockingQueue;
 
 /**
  * @author  MG
@@ -32,7 +31,9 @@ import java.sql.Timestamp;
 public class Watch extends Activity {
 
 
-    private startConnection new_connection;
+    private Connection connection;
+    private LocationManager locationManager;
+    private LocationListener locationListener;
 
     @Override
     protected void onCreate(Bundle savedInstanceState)
@@ -40,17 +41,92 @@ public class Watch extends Activity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_watch);
 
-
+        // parse starting intent
         Bundle net_parameters = getIntent().getExtras();
         String ipaddress = net_parameters.getString("ip");
-        String option = net_parameters.getString("option");
+        String options = net_parameters.getString("option");
         Integer port = net_parameters.getInt("port");
         Integer frequency = net_parameters.getInt("freq");
         Boolean data = net_parameters.getBoolean("data");
         Boolean wifi = net_parameters.getBoolean("wifi");
 
-        new_connection = new startConnection(ipaddress, port, frequency, data, wifi, option);
-        new_connection.execute();
+        // connect to server
+        connection = new Connection(ipaddress, port);
+        connection.start();
+
+        // send mac address to server
+        String macaddress = ((WifiManager) getSystemService(Context.WIFI_SERVICE))
+                .getConnectionInfo().getMacAddress();
+        connection.sendMessage("{\"id\":\"" + macaddress +"\"}");
+        Log.d("TCP_MESSAGE", "Sent ID");
+
+        // set up criteria object
+        Criteria criteria = new Criteria();
+        criteria.setSpeedRequired(true);
+        criteria.setSpeedAccuracy(Criteria.ACCURACY_HIGH);
+        criteria.setAltitudeRequired(true);
+        criteria.setCostAllowed(data);
+
+        Log.d("LOCATION", "Set Criteria");
+
+        locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
+
+        //locationManager.setTestProviderEnabled(LocationManager.NETWORK_PROVIDER, wifi);
+
+        boolean time = options.equalsIgnoreCase("time");
+        if(time)
+        {
+            frequency *= 1000;
+        }
+
+        Log.d("LOCATION", "Set Manager");
+
+        locationListener = new LocationListener()
+        {
+            public void onLocationChanged(Location current_location)
+            {
+                Long tsLong = System.currentTimeMillis()/1000;
+                String ts = tsLong.toString();
+
+                double latitude = current_location.getLatitude();
+                double longitude = current_location.getLongitude();
+                double altitude = current_location.getAltitude();
+                double speed = current_location.getSpeed();
+
+                String slatitude = Double.toString(latitude);
+                String slongitude = Double.toString(longitude);
+                String saltitude = Double.toString(altitude);
+                String sspeed = Double.toString(speed);
+
+                String sendloc = "{\"lat\":\"" + slatitude + "\", \"lon\":\"" + slongitude
+                        + "\", \"speed\":\"" + sspeed + "\", \"altitude\":\"" + saltitude
+                        + "\", \"timestamp\":\"" + ts + "\"}";
+
+                Log.d("INFO", "Set Info");
+
+                connection.sendMessage(sendloc);
+
+                Log.d("TCP", "Sent Data");
+
+            }
+            public void onStatusChanged(String provider, int status, Bundle extras) {}
+            public void onProviderEnabled(String provider) {}
+            public void onProviderDisabled(String provider) {}
+        };
+
+        Log.d("Listener", "Set Listener");
+        Log.d("Listener", "time: "+time);
+        Log.d("Listener", "frequency: "+frequency);
+        if(time)
+        {
+            locationManager.requestLocationUpdates(locationManager.getBestProvider(criteria, false), frequency, 0, locationListener);
+        }
+        else
+        {
+            locationManager.requestLocationUpdates(locationManager.getBestProvider(criteria, false), 0, frequency, locationListener);
+        }
+
+        Log.d("STARTED", "Sending Locations");
 
         final ImageView animImageView = (ImageView) findViewById(R.id.ivAnimation);
         animImageView.setBackgroundResource(R.drawable.anim);
@@ -64,6 +140,12 @@ public class Watch extends Activity {
         });
     }
 
+    @Override
+    public void onDestroy()
+    {
+        super.onDestroy();
+        locationManager.removeUpdates(locationListener);
+    }
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
@@ -86,202 +168,78 @@ public class Watch extends Activity {
 
     public void stopWatch(View view)
     {
-        new_connection.cancel(true);
+        connection.cancel();
         finish();
     }
 
-    class startConnection extends AsyncTask<Integer, Integer, Integer>
+    private class Connection extends Thread
     {
-        String ip_address;
-        String options;
-        Integer port_num;
-        Integer frequency;
-        Socket socket;
-        DataOutputStream os;
-        Boolean data;
-        Boolean wifi;
-        Boolean time;
-        Boolean started;
-        LocationManager locationManager;
-        LocationListener locationListener;
+        public static final int MSG_TYPE_SEND = 0;
+        public static final int MSG_TYPE_CANCEL = 1;
 
-        public startConnection(String ip_address, Integer port_num, Integer frequency, Boolean data, Boolean wifi, String options)
+        private String ip_address;
+        private Integer port_num;
+        LinkedBlockingQueue<Message> msgq;
+
+        public Connection(String ip_address, Integer port_num)
         {
             this.ip_address = ip_address;
             this.port_num = port_num;
-            this.frequency = frequency;
-            this.data = data;
-            this.wifi = wifi;
-            this.options = options;
-            started = false;
+            this.msgq = new LinkedBlockingQueue<Message>();
         }
 
         @Override
-        protected Integer doInBackground(Integer... strings)
+        public void run()
         {
-            try {
+            Socket socket;
+            DataOutputStream os;
+            boolean keepLooping;
 
+            try
+            {
                 Log.d("TCP_MESSAGE", "Connecting...");
 
-                Looper.prepare();
-
                 socket = new Socket(ip_address, port_num);
-
-                WifiManager manager = (WifiManager) getSystemService(Context.WIFI_SERVICE);
-                WifiInfo info = manager.getConnectionInfo();
-                String address = info.getMacAddress();
-                String maddress = "{\"id\":\"" + address +"\"}";
-
-                started = true;
-                Log.d("WIFI", "Retrieved MAC");
-
                 os = new DataOutputStream(socket.getOutputStream());
-                os.writeUTF(maddress);
 
-                Log.d("TCP_MESSAGE", "Sent ID");
+                keepLooping = true;
 
-                Criteria criteria = new Criteria();
-                criteria.setSpeedRequired(true);
-                criteria.setSpeedAccuracy(Criteria.ACCURACY_HIGH);
-                criteria.setAltitudeRequired(true);
-
-                criteria.setCostAllowed(data);
-
-                Log.d("LOCATION", "Set Criteria");
-
-                locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
-
-                //locationManager.setTestProviderEnabled(LocationManager.NETWORK_PROVIDER, wifi);
-
-                if(options.equalsIgnoreCase("time"))
+                while(keepLooping)
                 {
-                    time = true;
-                    frequency = frequency * 1000;
-                }
-                else
-                {
-                    time = false;
-                }
-
-
-                Log.d("LOCATION", "Set Manager");
-
-                locationListener = new LocationListener()
-                {
-
-                    double latitude = 0;
-                    double longitude = 0;
-                    double altitude = 0;
-                    double speed = 0;
-                    String slatitude;
-                    String slongitude;
-                    String saltitude;
-                    String sspeed;
-                    String sendloc;
-
-                    public void onLocationChanged(Location current_location)
+                    Message msg = msgq.take();
+                    Log.d("Connection", "looped: "+msg.what+":"+msg.obj);
+                    switch(msg.what)
                     {
-                        Long tsLong = System.currentTimeMillis()/1000;
-                        String ts = tsLong.toString();
-
-                        latitude = current_location.getLatitude();
-                        longitude = current_location.getLongitude();
-                        altitude = current_location.getAltitude();
-                        speed = current_location.getSpeed();
-
-                        slatitude = Double.toString(latitude);
-                        slongitude = Double.toString(longitude);
-                        saltitude = Double.toString(altitude);
-                        sspeed = Double.toString(speed);
-
-                        sendloc = "{\"lat\":\"" + slatitude + "\", \"lon\":\"" + slongitude + "\", \"speed\":\"" + sspeed +
-                                "\", \"altitude\":\"" + saltitude + "\", \"timestamp\":\"" + ts + "\"}";
-
-
-                        Log.d("INFO", "Set Info");
-
-                        try
-                        {
-                            os.writeUTF(sendloc);
-                        }
-                        catch(Exception e)
-                        {
-                            throw new RuntimeException(e);
-                        }
-
-                        Log.d("TCP", "Sent Data");
-
+                        case MSG_TYPE_SEND:
+                            os.writeUTF(msg.obj.toString());
+                            break;
+                        case MSG_TYPE_CANCEL:
+                            os.close();
+                            socket.close();
+                            keepLooping = false;
+                            break;
                     }
-
-                    public void onStatusChanged(String provider, int status, Bundle extras) {}
-
-                    public void onProviderEnabled(String provider) {}
-
-                    public void onProviderDisabled(String provider) {}
-
-                };
-
-
-                Log.d("Listener", "Set Listener");
-
-                Log.d("Listener", "time: "+time);
-                Log.d("Listener", "frequency: "+frequency);
-                if(time)
-                {
-                    locationManager.requestLocationUpdates(locationManager.getBestProvider(criteria, false), frequency, 0, locationListener);
                 }
-                else
-                {
-                    locationManager.requestLocationUpdates(locationManager.getBestProvider(criteria, false), 0, frequency, locationListener);
-                }
-
-
-                Log.d("STARTED", "Sending Locations");
-
-                return null;
-
-            } catch (Exception e) {
-                e.printStackTrace();
-                return null;
+            }
+            catch(Exception e)
+            {
+                throw new RuntimeException(e);
             }
         }
 
-
-        /*protected void onProgressUpdate(Integer value) {
-            if(value == 1)
-                Toast.makeText(Watch.this, "STEP 1", Toast.LENGTH_SHORT).show();
-            if(value == 2)
-                Toast.makeText(Watch.this, "STEP 2", Toast.LENGTH_SHORT).show();
-            if(value == 3)
-                Toast.makeText(Watch.this, "STEP 3", Toast.LENGTH_SHORT).show();
-            if(value == 4)
-                Toast.makeText(Watch.this, "STEP 4", Toast.LENGTH_SHORT).show();
-
+        public void cancel()
+        {
+            Message msg = new Message();
+            msg.what = MSG_TYPE_CANCEL;
+            msgq.add(msg);
         }
 
-        protected void onPostExecute()
+        public void sendMessage(String message)
         {
-            try {
-                os.close();
-                socket.close();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }*/
-
-        @Override
-        protected void onCancelled()
-        {
-            try {
-                if (started) {
-                    os.close();
-                    socket.close();
-                    locationManager.removeUpdates(locationListener);
-                }
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
+            Message msg = new Message();
+            msg.what = MSG_TYPE_SEND;
+            msg.obj = message;
+            msgq.add(msg);
         }
     }
-
 }
