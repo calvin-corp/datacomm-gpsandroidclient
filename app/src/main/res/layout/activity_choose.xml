@@ -1,0 +1,249 @@
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/test"
+    tools:context="com.example.manuel.bigbrotha.Choose">
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingLeft="@dimen/activity_horizontal_margin"
+            android:paddingRight="@dimen/activity_horizontal_margin"
+            android:paddingTop="@dimen/activity_vertical_margin"
+            android:paddingBottom="@dimen/activity_vertical_margin">
+
+            <TextView
+                android:text="Choose your Settings"
+                android:textColor="#4F3B90"
+                android:textSize="30sp"
+                android:fontFamily="sans-serif"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_centerHorizontal="true"
+                android:textStyle="bold"
+                android:id="@+id/one"
+                />
+
+            <TableLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_below="@id/one"
+                android:layout_marginTop="20dp"
+                android:id="@+id/table">
+
+                <TableRow
+                    android:layout_width="fill_parent"
+                    android:layout_height="wrap_content">
+
+                    <TextView
+                        android:text="IP Address:  "
+                        android:layout_height="wrap_content"
+                        android:layout_width="wrap_content"
+                        android:textColor="#FFFFFF"
+                        android:textSize="20sp"
+                        android:fontFamily="sans-serif"
+                        />
+
+                    <EditText
+                        android:layout_width="0dp"
+                        android:layout_height="fill_parent"
+                        android:layout_weight="1"
+                        android:id="@+id/ipaddress"
+                        android:background="#FFFFFF"
+                        />
+
+                </TableRow>
+
+                <TableRow
+                    android:layout_width="fill_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp">
+
+                    <TextView
+                        android:text="Port #: "
+                        android:layout_height="wrap_content"
+                        android:layout_width="wrap_content"
+                        android:textColor="#FFFFFF"
+                        android:textSize="20sp"
+                        android:fontFamily="sans-serif"
+                        />
+
+                    <EditText
+                        android:layout_width="0dp"
+                        android:layout_height="match_parent"
+                        android:layout_weight="1"
+                        android:id="@+id/portnumber"
+                        android:background="#FFFFFF"
+                        />
+
+                </TableRow>
+            </TableLayout>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:id="@+id/textfreq"
+                android:text="Update Frequency"
+                android:textColor="#FFFFFF"
+                android:textSize="25sp"
+                android:fontFamily="sans-serif"
+                android:layout_below="@+id/table"
+                android:layout_marginTop="15dp"
+                android:textStyle="bold"
+                />
+
+            <RadioGroup
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="15dp"
+                android:id="@+id/frequency"
+                android:layout_below="@+id/textfreq">
+
+
+                    <RadioButton
+                        android:layout_width="wrap_content"
+                        android:layout_height="fill_parent"
+                        android:id="@+id/time"
+                        android:checked="true"
+                        android:text="By time"
+                        android:textColor="#FFFFFF"
+                        android:textSize="20sp"
+                        android:fontFamily="sans-serif"/>
+
+                    <RadioButton
+                        android:layout_width="wrap_content"
+                        android:layout_height="fill_parent"
+                        android:id="@+id/distance"
+                        android:text="By Distance  "
+                        android:textColor="#FFFFFF"
+                        android:textSize="20sp"
+                        android:fontFamily="sans-serif"/>
+
+            </RadioGroup>
+
+            <TableLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_below="@id/frequency"
+                android:id="@+id/tablefreq"
+                android:layout_marginTop="9dp">
+                <TableRow>
+                    <TextView
+                        android:text="Frequency:  "
+                        android:layout_height="wrap_content"
+                        android:layout_width="wrap_content"
+                        android:textColor="#FFFFFF"
+                        android:textSize="20sp"
+                        android:fontFamily="sans-serif"/>
+
+                    <EditText
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:id="@+id/reqfreq"
+                        android:background="#FFFFFF"/>
+
+                    <TextView
+                        android:text=" sec / meters"
+                        android:layout_height="wrap_content"
+                        android:layout_width="wrap_content"
+                        android:textColor="#FFFFFF"
+                        android:textSize="20sp"
+                        android:fontFamily="sans-serif"/>
+                </TableRow>
+
+            </TableLayout>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:id="@+id/extras"
+                android:text="Extras"
+                android:textColor="#FFFFFF"
+                android:textSize="25sp"
+                android:fontFamily="sans-serif"
+                android:layout_below="@+id/tablefreq"
+                android:layout_marginTop="15dp"
+                android:textStyle="bold"
+                />
+
+
+            <CheckBox
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_below="@id/extras"
+                android:checked="true"
+                android:layout_marginTop="15dp"
+                android:id="@+id/dcharges"/>
+
+            <TextView
+                android:text="  Data Charges"
+                android:layout_height="wrap_content"
+                android:layout_width="wrap_content"
+                android:textColor="#FFFFFF"
+                android:textSize="20sp"
+                android:fontFamily="sans-serif"
+                android:layout_toRightOf="@id/dcharges"
+                android:layout_below="@id/extras"
+                android:layout_marginTop="18dp"/>
+
+            <CheckBox
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_below="@id/dcharges"
+                android:checked="true"
+                android:layout_marginTop="3dp"
+                android:id="@+id/dwifi"/>
+
+            <TextView
+                android:text="  WiFi On"
+                android:layout_height="wrap_content"
+                android:layout_width="wrap_content"
+                android:textColor="#FFFFFF"
+                android:textSize="20sp"
+                android:fontFamily="sans-serif"
+                android:layout_toRightOf="@id/dcharges"
+                android:layout_below="@id/dcharges"
+                android:layout_marginTop="3dp"/>
+
+            <TableLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_below="@id/dwifi"
+                android:layout_centerHorizontal="true"
+                android:layout_marginTop="15dp">
+
+                <TableRow
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content">
+
+                <Button
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text=" Start Watch "
+                    android:id="@+id/startwatch"
+                    android:onClick="startWatch"
+                    android:background="#DADADA"/>
+
+                <Button
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginLeft="9dp"
+                    android:text="       Clear       "
+                    android:id="@+id/clear"
+                    android:onClick="clearFields"
+                    android:background="#DADADA"/>
+                </TableRow>
+
+            </TableLayout>
+
+        </RelativeLayout>
+
+    </ScrollView>
+
+</RelativeLayout>

@@ -1,0 +1,17 @@
+.gradle
+/local.properties
+/.idea*
+/.idea/libraries
+.DS_Store
+/build
+gradle/
+gradlew
+gradlew.bat
+settings.gradle
+gradle.properties
+build.gradle
+BigBrotha.iml
+/app/app.iml
+/app/build*
+/app/build.gradle
+/app/proguard-rules.pro
