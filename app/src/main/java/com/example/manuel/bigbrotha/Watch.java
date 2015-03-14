@@ -20,9 +20,12 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.ImageView;
+import android.widget.Toast;
 
 import java.io.DataOutputStream;
+import java.io.IOException;
 import java.net.Socket;
+import java.net.UnknownHostException;
 import java.util.concurrent.LinkedBlockingQueue;
 
 /**
@@ -36,8 +39,7 @@ public class Watch extends Activity {
     private LocationListener locationListener;
 
     @Override
-    protected void onCreate(Bundle savedInstanceState)
-    {
+    protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_watch);
 
@@ -51,13 +53,21 @@ public class Watch extends Activity {
         Boolean wifi = net_parameters.getBoolean("wifi");
 
         // connect to server
-        connection = new Connection(ipaddress, port);
-        connection.start();
-
+        try {
+            connection = new Connection(ipaddress, port);
+            connection.start();
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
         // send mac address to server
-        String macaddress = ((WifiManager) getSystemService(Context.WIFI_SERVICE))
-                .getConnectionInfo().getMacAddress();
-        connection.sendMessage("{\"id\":\"" + macaddress +"\"}");
+        try {
+            String macaddress = ((WifiManager) getSystemService(Context.WIFI_SERVICE))
+                    .getConnectionInfo().getMacAddress();
+            connection.sendMessage("{\"id\":\"" + macaddress + "\"}");
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+
         Log.d("TCP_MESSAGE", "Sent ID");
 
         // set up criteria object
@@ -74,18 +84,15 @@ public class Watch extends Activity {
         //locationManager.setTestProviderEnabled(LocationManager.NETWORK_PROVIDER, wifi);
 
         boolean time = options.equalsIgnoreCase("time");
-        if(time)
-        {
+        if (time) {
             frequency *= 1000;
         }
 
         Log.d("LOCATION", "Set Manager");
 
-        locationListener = new LocationListener()
-        {
-            public void onLocationChanged(Location current_location)
-            {
-                Long tsLong = System.currentTimeMillis()/1000;
+        locationListener = new LocationListener() {
+            public void onLocationChanged(Location current_location) {
+                Long tsLong = System.currentTimeMillis() / 1000;
                 String ts = tsLong.toString();
 
                 double latitude = current_location.getLatitude();
@@ -104,25 +111,33 @@ public class Watch extends Activity {
 
                 Log.d("INFO", "Set Info");
 
-                connection.sendMessage(sendloc);
+
+                try {
+                    connection.sendMessage(sendloc);
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
+                }
 
                 Log.d("TCP", "Sent Data");
 
             }
-            public void onStatusChanged(String provider, int status, Bundle extras) {}
-            public void onProviderEnabled(String provider) {}
-            public void onProviderDisabled(String provider) {}
+
+            public void onStatusChanged(String provider, int status, Bundle extras) {
+            }
+
+            public void onProviderEnabled(String provider) {
+            }
+
+            public void onProviderDisabled(String provider) {
+            }
         };
 
         Log.d("Listener", "Set Listener");
-        Log.d("Listener", "time: "+time);
-        Log.d("Listener", "frequency: "+frequency);
-        if(time)
-        {
+        Log.d("Listener", "time: " + time);
+        Log.d("Listener", "frequency: " + frequency);
+        if (time) {
             locationManager.requestLocationUpdates(locationManager.getBestProvider(criteria, false), frequency, 0, locationListener);
-        }
-        else
-        {
+        } else {
             locationManager.requestLocationUpdates(locationManager.getBestProvider(criteria, false), 0, frequency, locationListener);
         }
 
@@ -141,8 +156,7 @@ public class Watch extends Activity {
     }
 
     @Override
-    public void onDestroy()
-    {
+    public void onDestroy() {
         super.onDestroy();
         locationManager.removeUpdates(locationListener);
     }
@@ -166,14 +180,12 @@ public class Watch extends Activity {
         return super.onOptionsItemSelected(item);
     }
 
-    public void stopWatch(View view)
-    {
+    public void stopWatch(View view) {
         connection.cancel();
         finish();
     }
 
-    private class Connection extends Thread
-    {
+    private class Connection extends Thread {
         public static final int MSG_TYPE_SEND = 0;
         public static final int MSG_TYPE_CANCEL = 1;
 
@@ -181,37 +193,44 @@ public class Watch extends Activity {
         private Integer port_num;
         LinkedBlockingQueue<Message> msgq;
 
-        public Connection(String ip_address, Integer port_num)
-        {
+        public Connection(String ip_address, Integer port_num) {
             this.ip_address = ip_address;
             this.port_num = port_num;
             this.msgq = new LinkedBlockingQueue<Message>();
         }
 
         @Override
-        public void run()
-        {
-            Socket socket;
-            DataOutputStream os;
+        public void run() {
+            Socket socket = null;
+            DataOutputStream os = null;
             boolean keepLooping;
 
-            try
-            {
+            try {
                 Log.d("TCP_MESSAGE", "Connecting...");
+                try {
+                    socket = new Socket(ip_address, port_num);
+                    os = new DataOutputStream(socket.getOutputStream());
+                } catch (UnknownHostException e) {
+                    mHandler.post(mError);
+                    finish();
+                }
 
-                socket = new Socket(ip_address, port_num);
-                os = new DataOutputStream(socket.getOutputStream());
 
                 keepLooping = true;
 
-                while(keepLooping)
-                {
+                while (keepLooping) {
                     Message msg = msgq.take();
-                    Log.d("Connection", "looped: "+msg.what+":"+msg.obj);
-                    switch(msg.what)
-                    {
+                    Log.d("Connection", "looped: " + msg.what + ":" + msg.obj);
+                    switch (msg.what) {
                         case MSG_TYPE_SEND:
-                            os.writeUTF(msg.obj.toString());
+                            try {
+                                os.writeUTF(msg.obj.toString());
+                            }
+                            catch(IOException e)
+                            {
+                                mHandler.post(mError);
+                                e.printStackTrace();
+                            }
                             break;
                         case MSG_TYPE_CANCEL:
                             os.close();
@@ -220,26 +239,30 @@ public class Watch extends Activity {
                             break;
                     }
                 }
-            }
-            catch(Exception e)
-            {
+            } catch (Exception e) {
                 throw new RuntimeException(e);
             }
         }
 
-        public void cancel()
-        {
+        public void cancel() {
             Message msg = new Message();
             msg.what = MSG_TYPE_CANCEL;
             msgq.add(msg);
         }
 
-        public void sendMessage(String message)
-        {
+        public void sendMessage(String message) {
             Message msg = new Message();
             msg.what = MSG_TYPE_SEND;
             msg.obj = message;
             msgq.add(msg);
         }
     }
+
+    final Handler mHandler = new Handler();
+    final Runnable mError = new Runnable() {
+        public void run() {
+            Toast.makeText(Watch.this, "Connection Error", Toast.LENGTH_SHORT).show();
+        }
+
+    };
 }
