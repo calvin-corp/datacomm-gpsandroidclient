@@ -2,14 +2,15 @@ package com.example.manuel.bigbrotha;
 
 import android.app.Activity;
 import android.content.Intent;
-import android.graphics.Color;
 import android.os.Bundle;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 
 /**
- * @author  MG
+ * Welcome activity, main class has the auto-generated methods plus an extra method to move into he next
+ * activity.
+ * @author  Manuel Gonzales
  */
 public class Main extends Activity {
 
@@ -39,6 +40,10 @@ public class Main extends Activity {
         return super.onOptionsItemSelected(item);
     }
 
+    /**
+     * once the button in the layout is pressed it will move to the Choose activity.
+     * @param view
+     */
     public void beginWatch(View view)
     {
         Intent choose = new Intent(Main.this, Choose.class);

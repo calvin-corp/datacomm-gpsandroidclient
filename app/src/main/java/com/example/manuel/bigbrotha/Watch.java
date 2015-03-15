@@ -29,7 +29,10 @@ import java.net.UnknownHostException;
 import java.util.concurrent.LinkedBlockingQueue;
 
 /**
- * @author  MG
+ * Tracking activity, watch class will take all the user preferences/settings and will start
+ * sending the data based on the preferred frequency to the specified server
+ * @designer Manuel Gonzales
+ * @programmer Manuel Gonzales / Eric Tsang
  */
 public class Watch extends Activity {
 
@@ -38,6 +41,12 @@ public class Watch extends Activity {
     private LocationManager locationManager;
     private LocationListener locationListener;
 
+    /**
+     * Gets the data from the bundle passed by the Choose class, it will then try to connect to the server
+     * send an ID (wifi MAC), then it will set up the criteria for the location and lastly will request
+     * updates based on the frequency specified by the user. By using a location Listener.
+     * @param savedInstanceState
+     */
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -90,6 +99,10 @@ public class Watch extends Activity {
 
         Log.d("LOCATION", "Set Manager");
 
+        /**
+         * Class Location Listener, when there is a location change it will update the location
+         * and will send it to the server in a formatted string.
+         */
         locationListener = new LocationListener() {
             public void onLocationChanged(Location current_location) {
                 Long tsLong = System.currentTimeMillis() / 1000;
@@ -180,11 +193,21 @@ public class Watch extends Activity {
         return super.onOptionsItemSelected(item);
     }
 
+    /**
+     * In case the stop button is pressed it will stop the thread and will finish the activity.
+     * @param view
+     */
     public void stopWatch(View view) {
         connection.cancel();
         finish();
     }
 
+    /**
+     * The core thread of the activity, it will attempt connection to the server at first and after
+     * succeeding it will go into a while loop that will wait for messages from the location listener
+     * and will send these to the server.
+     * On Error or after being canceled it will free the resources.
+     */
     private class Connection extends Thread {
         public static final int MSG_TYPE_SEND = 0;
         public static final int MSG_TYPE_CANCEL = 1;
@@ -258,6 +281,9 @@ public class Watch extends Activity {
         }
     }
 
+    /**
+     * Handler used to toast errors into the activity.
+     */
     final Handler mHandler = new Handler();
     final Runnable mError = new Runnable() {
         public void run() {

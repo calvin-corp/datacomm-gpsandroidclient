@@ -12,11 +12,14 @@ import android.widget.RadioButton;
 import android.widget.Toast;
 
 /**
- * @author  MG
+ * Settings activity, choose class has the auto-generated methods plus two extra methods to clear the fields
+ *  or move into the next activity and pass all the user preferences/settings.
+ * @author  Manuel Gonzales
  */
 public class Choose extends Activity {
 
 
+    //globals to parse the data from the text fields/checkboxes/radio buttons
     EditText iptext;
     EditText porttext;
     EditText freqtext;
@@ -25,6 +28,10 @@ public class Choose extends Activity {
     CheckBox data;
     CheckBox wifi;
 
+    /**
+     * Will get the data from the respective fields by ID
+     * @param savedInstanceState
+     */
     @Override
     protected void onCreate(Bundle savedInstanceState)
     {
@@ -64,6 +71,10 @@ public class Choose extends Activity {
         return super.onOptionsItemSelected(item);
     }
 
+    /**
+     * Clears all the text fields in the settings screen
+     * @param view
+     */
     public void clearFields(View view)
     {
         iptext.getText().clear();
@@ -71,6 +82,12 @@ public class Choose extends Activity {
         freqtext.getText().clear();
     }
 
+    /**
+     * Will get all the values entered by the user and will then validate each of them,
+     * if all of them are valid it will pass them in an intent/bundle to the next activity
+     * if one of them is invalid it will prompt the user and will return.
+     * @param view
+     */
     public void startWatch(View view)
     {
        String ip = iptext.getText().toString();
